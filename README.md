@@ -7,10 +7,26 @@
 - Insert a few rows into this table with different statuses.
 - Select only those invoices with status = "NEW"
 
+create type invoice_status as enum ('NEW', 'WAITING_FOR_PAYMENT', 'PAID');
+create table invoices (
+   id serial,
+   buyer text,
+   seller text,
+   status invoice_status,
+   value numeric,
+   account_number int);
+insert into invoices (buyer, seller, status, value, account_number)
+values ('company a', 'company b', 'NEW', 23.43, 123321123), ('company a', 'company b', 'WAITING_FOR_PAYMENT', 23.43, 123321123);
+select * from invoices where status = 'NEW';
+
 #### 2. UUID data type usage
 
 - Modify table "Invoices" - add column that will keep "internal_id". 
 - Update each row with a value in a column "internal_id". You can use this generator: https://www.uuidgenerator.net/
+
+
+alter table invoices add column internal_id uuid;
+update invoices set internal_id = '5f46ac3e-dad0-47d7-9314-3b449db25ceb' where id = ...
 
 #### 3. JSON data type usage
 
@@ -25,7 +41,25 @@
   "value": 23.43
 }
 
-
+alter table invoices add column json_view json;
+alter table invoices add column json_view_parsed jsonb;
+insert into invoices  (buyer, seller, status, value, account_number, json_view, json_view_parsed) 
+values ('company a', 'company b', 'NEW', 23.43, 123321123,
+'{
+  "buyer": "company a",
+  "seller": "company b",
+  "status": "NEW",
+  "account_number": 123321123
+  "value": 23.43
+}',
+'{
+  "buyer": "company a",
+  "seller": "company b",
+  "status": "NEW",
+  "account_number": 123321123
+  "value": 23.43
+}'
+);
 
 #### 4. Array data type usage
 
@@ -35,12 +69,26 @@
 - Select buyer name and his LAST phone number for invoice with id = 3;
 - Select an invoice which contains phone: 432323112 
 
+
+alter table invoices add column phones integer[3]
+update invoices 
+set phones = ARRAY[23211233, 125433221, 127643454]
+where id = 3;
+select buyer, phones[3] from invoices_2 i where id = 3; 
+select buyer, phones
+from invoices i 
+where '432323112' = ANY (phones);
+
 #### 5. Binary data type usage
 
 - Create a file, can be an image or just a text file
 - Create a new column in Invoices table that will keep this file
 - Insert this file into database for invoice with id = 1
 
+alter table invoices add column invoice_file bytea;
+update invoices
+set invoice_file = pg_read_binary_file('path/to/file')::bytea
+where id = 1;
 
 #### 6. Date/time data types usage
 
@@ -49,3 +97,19 @@
 - Update timezone in transaction type, set it to be Melbourne, Australia. 
 - Update timezone in transaction time column, set it to be Melbourne, Australia. 
 - Select transaction time column, make sure that 10 hours has been added to the time that previously was set.
+
+
+alter table invoices add column payment_deadline date;
+alter table invoices add column transaction_time timestamptz;
+alter table invoices add column created_time time;
+alter table invoices add column cyclic_payment interval;
+update invoices
+set payment_deadline = to_date('03/12/2015', 'MM/DD/YYYY') 
+update invoices
+set transaction_time = timestamp '2015-01-10 00:51:14'
+update invoices
+set transaction_hour = time '12:00:00'
+update invoices
+set cyclic_payment = interval '1 MONTH'
+update invoices set transation_time = timestamptz '2015-01-10 00:51:14 LIGT'
+select transation_time from invoices;
